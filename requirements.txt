@@ -1,11 +1,11 @@
-fastapi
-    uvicorn
-    sqlalchemy
-    alembic
-    asyncpg
-    PyJWT
-    passlib[bcrypt]
-    pytest
-    pytest-cov
-    ruff
-    mypy
+fastapi>=0.110
+uvicorn[standard]>=0.27
+sqlalchemy>=2.0
+psycopg2-binary>=2.9
+PyJWT>=2.8
+bcrypt>=4.0
+httpx>=0.26
+pytest>=8.0
+pytest-cov>=5.0
+ruff>=0.4
+mypy>=1.8

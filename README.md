@@ -1,23 +1,21 @@
 # Task Management API
 
-[![CI](https://github.com/akalmaliky-spec/task-management-api/actions/workflows/ci.yml/badge.svg)](https://github.com/akalmaliky-spec/task-management-api/actions/workflows/ci.yml)
+[![CI](https://github.com/akalmaliky-spec/task-management-api/actions/workflows/python-app.yml/badge.svg)](https://github.com/akalmaliky-spec/task-management-api/actions/workflows/python-app.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Production-grade FastAPI backend with JWT authentication, PostgreSQL database, Alembic migrations, and Docker support.
+FastAPI backend with JWT authentication, SQLAlchemy (SQLite for dev, PostgreSQL via Docker), and per-user task CRUD.
 
 ## Features
 
 - **FastAPI** framework for high-performance async APIs
 - **JWT Authentication** with secure password hashing
 - **PostgreSQL** database with SQLAlchemy ORM
-- **Alembic** for database migrations
 - **Docker** and Docker Compose for containerization
 - **Pydantic** schemas for request/response validation
 - **Comprehensive testing** with pytest
 - **CI/CD** with GitHub Actions
-- **Structured logging** for production monitoring
 - **CORS** configuration for frontend integration
 
 ## Quick Start
@@ -25,7 +23,7 @@ Production-grade FastAPI backend with JWT authentication, PostgreSQL database, A
 ### Prerequisites
 
 - Python 3.11+
-- PostgreSQL 14+
+- PostgreSQL 14+ (optional; SQLite is the default)
 - Docker and Docker Compose (optional)
 
 ### Installation
@@ -57,13 +55,7 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-5. Run database migrations:
-
-```bash
-alembic upgrade head
-```
-
-6. Start the development server:
+5. Start the development server:
 
 ```bash
 uvicorn app.main:app --reload
@@ -84,30 +76,27 @@ docker-compose up -d
 This starts:
 - FastAPI application on port 8000
 - PostgreSQL database on port 5432
-- Redis (optional) on port 6379
 
 ## Project Structure
 
 ```
 task-management-api/
 ├── app/
-│   ├── api/                 # API routes
-│   │   └── v1/
-│   │       ├── auth.py      # Authentication endpoints
-│   │       ├── users.py     # User management
-│   │       └── tasks.py     # Task CRUD
-│   ├── models/              # SQLAlchemy models
-│   ├── schemas/             # Pydantic schemas
-│   ├── core/                # Core utilities
-│   ├── config.py            # Application configuration
-│   ├── database.py          # Database setup
-│   ├── security.py          # Security utilities
+│   ├── routers/
+│   │   ├── auth.py          # Register / login
+│   │   ├── users.py         # Current-user profile
+│   │   └── tasks.py         # Task CRUD
+│   ├── config.py            # Settings from environment variables
+│   ├── database.py          # Engine, session, get_db dependency
+│   ├── deps.py              # get_current_user (JWT bearer)
+│   ├── models.py            # SQLAlchemy models
+│   ├── schemas.py           # Pydantic schemas
+│   ├── security.py          # bcrypt + JWT helpers
 │   └── main.py              # FastAPI application
-├── alembic/                 # Database migrations
-├── tests/                   # Test suite
-├── docker-compose.yml       # Docker Compose configuration
-├── Dockerfile               # Docker image definition
-└── requirements.txt         # Python dependencies
+├── tests/                   # pytest suite
+├── docker-compose.yml
+├── Dockerfile
+└── requirements.txt
 ```
 
 ## API Endpoints
@@ -115,7 +104,7 @@ task-management-api/
 ### Authentication
 
 - `POST /api/v1/auth/register` - Register new user
-- `POST /api/v1/auth/login` - Login and get access token
+- `POST /api/v1/auth/login` - Login with JSON `{"email", "password"}` and get a bearer token
 
 ### Users
 
@@ -124,7 +113,7 @@ task-management-api/
 
 ### Tasks
 
-- `GET /api/v1/tasks/` - List all tasks
+- `GET /api/v1/tasks/` - List your tasks (`?completed=true|false`, `skip`, `limit`)
 - `POST /api/v1/tasks/` - Create new task
 - `GET /api/v1/tasks/{id}` - Get task by ID
 - `PATCH /api/v1/tasks/{id}` - Update task
@@ -135,7 +124,7 @@ task-management-api/
 ### Running Tests
 
 ```bash
-make test
+pytest
 ```
 
 Or with coverage:
@@ -149,7 +138,8 @@ pytest --cov=app --cov-report=html
 Lint code:
 
 ```bash
-make lint
+ruff check .
+mypy --ignore-missing-imports app
 ```
 
 Format code:
@@ -158,36 +148,16 @@ Format code:
 ruff format .
 ```
 
-### Database Migrations
-
-Create new migration:
-
-```bash
-alembic revision --autogenerate -m "description"
-```
-
-Apply migrations:
-
-```bash
-alembic upgrade head
-```
-
-Rollback migration:
-
-```bash
-alembic downgrade -1
-```
-
 ## Configuration
 
 Environment variables (see `.env.example`):
 
 ```
 SECRET_KEY=your-secret-key-here
-DATABASE_URL=postgresql://user:password@localhost/dbname
-REDIS_URL=redis://localhost:6379/0
-ENVIRONMENT=development
-DEBUG=True
+DATABASE_URL=sqlite:///./tasks.db
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+ENVIRONMENT=development   # "production" refuses to start without SECRET_KEY
+CORS_ORIGINS=http://localhost:3000
 ```
 
 ## Deployment
@@ -222,7 +192,7 @@ Comprehensive test suite covering:
 - CRUD operations
 - Input validation
 - Error handling
-- Database transactions
+- Per-user task isolation
 
 Run tests:
 
@@ -251,5 +221,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
 - [SQLAlchemy](https://www.sqlalchemy.org/) - SQL toolkit and ORM
-- [Alembic](https://alembic.sqlalchemy.org/) - Database migrations
 - [Pydantic](https://pydantic-docs.helpmanual.io/) - Data validation
